@@ -1,0 +1,134 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "./NftMint.sol";
+
+contract Auction {
+    address auctioner = msg.sender;
+
+    using Counters for Counters.Counter;
+    Counters.Counter public auctionId;
+
+    uint256 public maxAuctionLimit;
+
+    struct AuctionInfo {
+        uint256 auctionId;
+        uint256 tokenId;
+        uint256 starttime;
+        uint256 intialAmt;
+        uint256 endtime;
+        uint256 highestBidAmount;
+        address highestBidder;
+        address winner;
+        IERC721 nftaddress;
+        bool bidTimeEnded;
+    }
+
+    mapping(uint256 => AuctionInfo) public auctions;
+
+    constructor(uint256 _maxAuctionLimit) {
+        maxAuctionLimit = _maxAuctionLimit;
+    }
+
+    modifier  onlyAuctioner(){
+        require(msg.sender == auctioner,"Only auctioner can claim Fund");
+        _;
+    }
+
+    function createAuction(
+        uint256 _tokenId,
+        uint256 _intialAmount,
+        uint256 _starttime,
+        uint256 _endtime,
+        address _nftaddress
+    ) public payable {
+        require(
+            _tokenId <= maxAuctionLimit,
+            "max Tokenid not greter then maxAuctionLimit"
+        );
+        require(_intialAmount > 0, "inital Price Must be greter then 0");
+        require(block.timestamp > _starttime, "Timestam greter then StartTime");
+        require(block.timestamp < _endtime, "Timestamp greter then endTime");
+
+        auctionId.increment();
+
+        uint256 auctioncounter = auctionId.current();
+
+        auctions[auctioncounter] = AuctionInfo({
+            auctionId: auctioncounter,
+            tokenId: _tokenId,
+            starttime: _starttime,
+            intialAmt: _intialAmount,
+            endtime: _endtime,
+            highestBidAmount: 0,
+            highestBidder: address(0),
+            winner: address(0),
+            nftaddress: IERC721(_nftaddress),
+            bidTimeEnded: false
+        });
+    }
+
+    function bid(uint256 _auctionid) external payable {
+        address priviosHighestBidder = auctions[_auctionid].highestBidder;
+        uint256 priviosHigestbidAmt = auctions[_auctionid].highestBidAmount;
+
+        require(
+            _auctionid == auctions[_auctionid].auctionId,
+            "Auction id not match & Available"
+        );
+
+        require(
+            msg.value > auctions[_auctionid].highestBidAmount,
+            "Bid Amount greter then Prvious bidder"
+        );
+
+        require(
+            block.timestamp > auctions[_auctionid].starttime,
+            "Timestam greter then StartTime"
+        );
+        require(
+            block.timestamp < auctions[_auctionid].endtime,
+            "Timestamp greter then endTime"
+        );
+
+        uint256 currenthigestbidAmt = msg.value;
+        address currentHigestbidder = msg.sender;
+
+        if (currenthigestbidAmt > priviosHigestbidAmt) {
+            payable(priviosHighestBidder).transfer(priviosHigestbidAmt);
+        }
+
+        auctions[_auctionid].highestBidder = currentHigestbidder;
+        auctions[_auctionid].highestBidAmount = currenthigestbidAmt;
+        auctions[_auctionid].winner = currentHigestbidder;
+    }
+
+    function ClaimNftToken(uint256 _auctionid) public {
+        require(
+            _auctionid == auctions[_auctionid].auctionId,
+            "Auction Id not available"
+        );
+        require(
+            block.timestamp > auctions[_auctionid].endtime,
+            "Auction not end yet"
+        );
+
+        require(
+            msg.sender == auctions[_auctionid].winner,
+            "Only Winner can Claim Nft"
+        );
+
+        IERC721(auctions[_auctionid].nftaddress).transferFrom(
+            address(this),
+            auctions[_auctionid].winner,
+            auctions[_auctionid].tokenId
+        );
+
+    }
+
+    function transferWinnerBidValue(uint256 _auctionid) public  onlyAuctioner{
+        payable(auctioner).transfer(auctions[_auctionid].highestBidAmount);
+    }
+}

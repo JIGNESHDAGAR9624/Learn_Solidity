@@ -1,0 +1,111 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "./StackMint.sol";
+
+contract UserStaking is Ownable {
+  StackMint public StakingtokenAddress;
+  
+  using Counters for Counters.Counter;
+  Counters.Counter public stakeId; 
+     
+  constructor(StackMint _tokenAddress) Ownable(msg.sender) {
+    StakingtokenAddress = _tokenAddress;
+  }
+
+  modifier onlyAdmin() {
+    require(msg.sender == owner(), "Only admin can call this function");
+    _;
+    }
+
+  struct DaysDetails {
+    uint256 numDays;
+    uint256 intertes;
+    uint256 totaltokenInDayTier;
+    bool exists;
+    }
+
+  struct UserDetails{
+    uint256 stakeId;
+    uint256 userstakeAmount;
+    uint256 Stakedtime;
+    uint256 timeperiodInDay;
+    uint256 intrestamount;
+    uint256 Stakereward;
+    
+}
+
+  mapping(uint256 => DaysDetails) public daydetails;
+  mapping (uint256 => UserDetails)public userdetails;
+  
+  event StakeUser(address indexed user , uint256 stakeId , uint256 amount ,uint256 _days, uint256 stakingReward);
+  event unStakeUser(address indexed user , uint256 amount , uint256 stakingReward);
+  
+  function addDaysdetails(uint256 addDays, uint256 intrest)
+        external
+        onlyAdmin
+    {
+   
+    require(addDays > 0, "Days Must be greter then 0");
+    require(intrest > 0, "Intrest must be greter than 0");
+    
+
+    daydetails[addDays] = DaysDetails(addDays, intrest, 0,true);
+  
+    }
+
+  function updateDayDetails(uint256 _addDays, uint256 _intrest, uint256 _totaltokenInDayTier) public onlyOwner {
+    require(_addDays > 0 ,"Days Must be Greterthan 0");
+    require(_intrest > 0, "intrest Must be greterthan 0");
+    daydetails[_addDays] = DaysDetails(_addDays,_intrest,_totaltokenInDayTier,true);
+  }
+
+  function readDayDetails(uint256 _addDays) public onlyAdmin view returns(DaysDetails memory){
+    return daydetails[_addDays];
+  }
+
+  function removeDays(uint256 _addDays) public onlyAdmin {
+    delete daydetails[_addDays];
+  }
+
+  function stakeAmount(uint256 amount,uint256 _day) public  onlyAdmin {
+    require(amount > 0 , "Amount greter than 0");
+    
+
+    require(daydetails[_day].exists,"Days not Exist");
+    uint256 rewardIntrest = (amount * daydetails[_day].intertes * _day / (100 * 365));
+   
+    stakeId.increment();
+    uint256 currentStakeId = stakeId.current();
+
+   UserDetails memory newUserStake = UserDetails(
+    {
+      stakeId: currentStakeId,
+      userstakeAmount: amount,
+      Stakedtime: block.timestamp, 
+      timeperiodInDay: _day,
+      intrestamount: daydetails[_day].intertes,
+      Stakereward: rewardIntrest
+    }
+   );
+    userdetails[currentStakeId] = newUserStake;
+
+    StakingtokenAddress.transferFrom(msg.sender,address(this),amount);
+    emit StakeUser(msg.sender,currentStakeId,amount,_day,rewardIntrest);
+  }
+ 
+  
+  function unstakeAmount(uint256 _stakeid) public onlyAdmin{
+   require(userdetails[_stakeid].stakeId > 0,"Stake id Greter then 0");
+   require(_stakeid >= userdetails[_stakeid].stakeId," User not Available  ");
+   UserDetails storage stakes = userdetails[_stakeid];
+   uint256 rewardIntrest = (stakes.userstakeAmount * stakes.intrestamount *stakes.timeperiodInDay / (100 * 365));
+   StakingtokenAddress.transfer(msg.sender, rewardIntrest);
+   emit unStakeUser(msg.sender, userdetails[_stakeid].userstakeAmount,rewardIntrest );
+   delete userdetails[_stakeid];
+  }
+  
+
+ }

@@ -1,0 +1,221 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Nftmint.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./Tokenmint.sol";
+
+contract FractionalNft is Ownable, ERC20 {
+    // For Fraction
+    Nftmint public nft;
+    Tokenmint public tokenmint;
+    uint16 public tokenId;
+    bool public initialized;
+    bool public redeemable;
+   
+
+    // For Auction
+    address auctioner = msg.sender;
+    uint256 public maxAuctionLimit;
+
+    using Counters for Counters.Counter;
+    Counters.Counter public auctionId;
+
+    constructor() Ownable(msg.sender) ERC20("", "") {}
+
+    // For Fraction
+    enum SaleType {
+        Fraction,
+        Auction
+    }
+
+    struct ListNft {
+        uint256 tokenid;
+        uint256 price;
+        SaleType saletype;
+    }
+
+    // For Auction
+
+    struct AuctionInfo {
+        uint256 auctionId;
+        uint256 tokenId;
+        uint256 starttime;
+        uint256 intialAmt;
+        uint256 endtime;
+        uint256 highestBidAmount;
+        address highestBidder;
+        address winner;
+        IERC721 nftaddress;
+        bool bidTimeEnded;
+    }
+
+    modifier onlyAuctioner() {
+        require(msg.sender == auctioner, "Only auctioner can claim Fund");
+        _;
+    }
+
+    // For Fraction
+    mapping(uint256 => ListNft) public listingnft;
+
+    // For Auction
+    mapping(uint256 => AuctionInfo) public auctions;
+
+    function createAuction(
+        uint256 _maxAuctionLimit,
+        uint256 _tokenId,
+        uint256 _intialAmount,
+        uint256 _starttime,
+        uint256 _endtime,
+        address _nftaddress
+    ) public payable {
+       
+        require(isForAuctionSale == true, "Please Select Type Auction");
+        require(_intialAmount > 0, "inital Price Must be greter then 0");
+        require(block.timestamp > _starttime, "Timestam greter then StartTime");
+        require(block.timestamp < _endtime, "Timestamp greter then endTime");
+
+        auctionId.increment();
+
+        uint256 auctioncounter = auctionId.current();
+
+        auctions[auctioncounter] = AuctionInfo({
+            auctionId: auctioncounter,
+            tokenId: _tokenId,
+            starttime: _starttime,
+            intialAmt: _intialAmount,
+            endtime: _endtime,
+            highestBidAmount: 0,
+            highestBidder: address(0),
+            winner: address(0),
+            nftaddress: IERC721(_nftaddress),
+            bidTimeEnded: false
+        });
+        maxAuctionLimit = _maxAuctionLimit;
+    }
+
+    function bid(uint256 _auctionid) external payable {
+        require(isForAuctionSale == true, "Please Select Type Auction");
+        address priviosHighestBidder = auctions[_auctionid].highestBidder;
+        uint256 priviosHigestbidAmt = auctions[_auctionid].highestBidAmount;
+
+        require(
+            _auctionid == auctions[_auctionid].auctionId,
+            "Auction id not match & Available"
+        );
+
+        require(
+            msg.value > auctions[_auctionid].highestBidAmount,
+            "Bid Amount greter then Prvious bidder"
+        );
+
+        require(
+            block.timestamp > auctions[_auctionid].starttime,
+            "Timestam greter then StartTime"
+        );
+        require(
+            block.timestamp < auctions[_auctionid].endtime,
+            "Timestamp greter then endTime"
+        );
+
+        uint256 currenthigestbidAmt = msg.value;
+        address currentHigestbidder = msg.sender;
+
+        if (currenthigestbidAmt > priviosHigestbidAmt) {
+            payable(priviosHighestBidder).transfer(priviosHigestbidAmt);
+        }
+
+        auctions[_auctionid].highestBidder = currentHigestbidder;
+        auctions[_auctionid].highestBidAmount = currenthigestbidAmt;
+        auctions[_auctionid].winner = currentHigestbidder;
+    }
+
+    function ClaimNftToken(uint256 _auctionid) public {
+        require(isForAuctionSale == true, "Please Select Type Auction");
+        require(
+            _auctionid == auctions[_auctionid].auctionId,
+            "Auction Id not available"
+        );
+        require(
+            block.timestamp > auctions[_auctionid].endtime,
+            "Auction not end yet"
+        );
+
+        require(
+            msg.sender == auctions[_auctionid].winner,
+            "Only Winner can Claim Nft"
+        );
+
+        IERC721(auctions[_auctionid].nftaddress).transferFrom(
+            address(this),
+            auctions[_auctionid].winner,
+            auctions[_auctionid].tokenId
+        );
+    }
+
+    function transferWinnerBidValue(uint256 _auctionid) public onlyAuctioner {
+        payable(auctioner).transfer(auctions[_auctionid].highestBidAmount);
+    }
+
+    //For Fraction
+    function initialize(
+        address _collection,
+        uint16 _tokenId,
+        uint256 _amount
+    ) external onlyOwner {
+        require(!initialized, "Already initialized");
+        require(_amount > 0, "can't initialize zero amount");
+
+        nft = Nftmint(_collection);
+        nft.safeTransferFrom(msg.sender, address(this), _tokenId);
+        tokenId = _tokenId;
+        initialized = true;
+
+        tokenmint.mintToken(msg.sender, _amount);
+    }
+
+    function ListNftforSale(
+        uint256 _tokenId,
+        uint256 price,
+        SaleType _saleType
+    ) external onlyOwner {
+        require(
+            _saleType == listingnft[_tokenId].saletype,
+            "not Available Sale Type"
+        );
+
+        if (_saleType == SaleType.Fraction) {
+            isForFractionSale = true;
+        } else if (_saleType == SaleType.Auction) {
+            isForAuctionSale = true;
+        } else {
+            require(
+                isForFractionSale && isForAuctionSale,
+                "Please select valid Type for Sale"
+            );
+        }
+
+        listingnft[_tokenId] = ListNft(_tokenId, price, _saleType);
+    }
+
+    function BuyFractionNft() external payable {
+        require(isForFractionSale, "Not for sale");
+        require(msg.value >= 0, "Not enough ether to purchase");
+
+        nft.transferFrom(address(this), msg.sender, tokenId);
+
+        isForFractionSale = false;
+        redeemable = true;
+    }
+
+    function redeem(uint256 _amount) external {
+        require(redeemable, "Redemption not available");
+
+        uint256 totalEther = address(this).balance;
+        uint256 amountToRedeem = (_amount * totalEther) / totalSupply();
+
+        burn(msg.sender, amount);
+
+        payable(msg.sender).transfer(amountToRedeem);
+    }
+}

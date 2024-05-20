@@ -1,0 +1,92 @@
+// below is Nft Mint Contract
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+
+
+contract NftMint is ERC721, Ownable {
+    
+    using Counters for Counters.Counter;
+    Counters.Counter public  _tokenIds;
+
+    constructor() ERC721("MyToken","MKT") Ownable(msg.sender){
+    } 
+     
+     function mint() external   {
+       _tokenIds.increment();
+        uint256 newItemId = _tokenIds.current();
+	       _mint(msg.sender, newItemId);
+    }
+}
+
+// Below is s Nft marketplase contract
+
+/ SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./NftMint.sol";
+
+contract NftMarketplase is ERC721 {
+    
+   address public owner;
+   uint256 public tokenId = 1;
+   NftMint public mint;
+    
+
+   struct NFT {
+     address owner;
+     uint256 price;
+     bool isForSale;
+   }
+   
+    mapping(uint256 => NFT) public nfts;
+    mapping(address => uint256) public boughtnft;
+
+    constructor(address _mintNFTContract) ERC721("MyToken", "MKT") {
+      owner = msg.sender;
+      mint = NftMint(_mintNFTContract);
+    }
+    
+    function sellNFT(uint256 tokenId, uint256 price) external {
+      require(mint.ownerOf(_tokenId) == msg.sender, "Only NFT owner can sell it");
+      // Make sure the NFT is approved for transfer to this contract
+      require(mint.getApproved(_tokenId) == address(this), "Contract not approved to transfer NFT");
+      // Transfer the NFT to this contract
+      mint.transferFrom(msg.sender,address(this),_tokenId);
+      // Update ownership information
+      nfts[_tokenId] = NFT(msg.sender, _price, true);
+    }
+   
+   
+    function buyNFT(uint256 _tokenId) external payable {
+      require(nfts[_tokenId].isForSale, "NFT is not for sale");
+      require(msg.value >= nfts[_tokenId].price, "Insufficient funds to buy NFT");
+      address buyer = msg.sender;
+      address seller = mint.ownerOf(_tokenId);
+      mint.transferFrom(seller, buyer, _tokenId);
+    }
+
+    function changePrice(uint256 tokenId, uint256 newPrice) external {
+      require(mint.ownerOf(_tokenId) == msg.sender, "Only NFT owner can resell it");
+      require(nfts[_tokenId].isForSale, "NFT is not listed for sale");
+      nfts[_tokenId].price = _newPrice;
+    }
+
+    function listNFTForSale(uint256 tokenId, uint256 price) external {
+      require(mint.ownerOf(_tokenId) == msg.sender, "Only NFT owner can list it for sale");
+      nfts[_tokenId] = NFT(msg.sender, _price, true);
+    }
+       
+    function cancelListing(uint256 _tokenId) external {
+      require(nfts[_tokenId].owner == msg.sender,"Only Nft Owner can cancel Listing Nft");
+      require(nfts[_tokenId].isForSale,"nft is not for sell");
+      nfts[_tokenId].isForSale = false;
+    }
+
+  }
+

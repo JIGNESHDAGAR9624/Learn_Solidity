@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+
+
+contract StructMapping  {
+  
+   struct Student {
+     string name;
+     string subject;
+     uint marks;
+    }
+
+ // mapping with struct  
+
+   mapping(uint  => Student) public  result;	
+     function adding_values(uint _index ,string memory _name , string memory _subject , uint _marks) public {
+       Student memory std = Student({
+        name: _name,
+        subject:_subject,
+        marks: _marks
+    });
+      result[_index] = std; // For Mapping
+    }
+
+    function getDetails(uint _index) public view returns(string memory , string memory , uint){
+      Student memory studnet = result[_index];
+      return (studnet.name , studnet.subject , studnet.marks);
+    }
+
+    function deleteDetails(uint index)public {
+      delete result[index];
+    }
+
+// for update Code
+    function updatedetails(uint _index , string memory _name , string memory _subject , uint _marks) public {
+        result[_index].name = _name;
+        result[_index].subject = _subject;
+        result[_index].marks = _marks;
+    }
+
+
+
+
+}

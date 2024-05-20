@@ -1,0 +1,47 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.21;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract NftMinting is ERC721, Ownable {
+    uint256 public mintPrice = 0.05 ether;
+    uint256 public totalSupply;
+    uint256 public maxSupply;
+    bool public isMintedEnabled;
+    mapping(address => uint256) public mintedWallet;
+
+    // constructor()  ERC721("MyToken" , "MKT") Ownable(msg.sender){
+    //     maxSupply =2;
+    // }
+
+    constructor() payable  ERC721("MyToken","MKT") Ownable(msg.sender){
+        maxSupply =2;
+    }
+    
+
+    function MintEnabled() external  onlyOwner {
+      isMintedEnabled = !isMintedEnabled;
+    }
+    function setMaxSupply(uint256 maxSupply_) external  onlyOwner {
+        maxSupply = maxSupply_;
+    }
+
+    function mint()external  payable  {
+        require(isMintedEnabled ,"Minting not Enabled");
+        require(mintedWallet[msg.sender] < 1,"Exceed max per wallet");
+        require(msg.value == mintPrice , "Wrong Value");
+        require(maxSupply > totalSupply , "Sold Out");
+
+        mintedWallet[msg.sender]++;
+        totalSupply++;
+        uint256 tokenId = totalSupply;
+        _safeMint(msg.sender , tokenId);
+    }
+
+
+
+
+
+
+}

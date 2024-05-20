@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./Mint.sol";
+
+
+contract Buysell is ERC20 {
+
+  address public owner;
+
+  Mint public mint;
+
+  uint256 public constant tokenprice = 5;
+
+  mapping(address => uint256) public boughtBalance;
+
+  event TokenPurchased(address indexed buyer , uint256 amount);
+  event TokenSold(address indexed seller , uint256 amount);
+
+	
+  constructor(address add) ERC20("myTOken", "Token")  {
+    owner = msg.sender;
+    mint = Mint(add);
+  }
+
+  function buyToken(uint256 amount) external payable  {
+    require(amount > 0 , "Amount must be greter then 0");
+    mint.transfer(msg.sender, amount);
+    boughtBalance[msg.sender] += amount;
+    emit TokenPurchased(address(this), amount);
+  }
+
+   function sellTokens(uint256 amount) external {
+      require(amount > 0, "Amount must be greater than 0");
+      require(boughtBalance[msg.sender] >= amount, "Insufficient balance to sell");
+      mint.transfer(msg.sender, amount);
+      boughtBalance[msg.sender] -= amount; 
+      emit TokenSold(msg.sender, amount);
+    }
+
+  
+     }

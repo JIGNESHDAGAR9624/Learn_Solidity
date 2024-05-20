@@ -1,0 +1,68 @@
+  // SPDX-License-Identifier: GPL-3.0
+
+    pragma solidity >=0.8.2 <0.9.0;
+
+
+contract Library {
+
+  address public owner;
+
+  struct LibDetail{
+     string bookname;
+     string author;
+     uint256 price;
+     uint256 Qut;
+     uint256 totalBought;
+     uint256 totalbook;
+  }
+
+  constructor() {
+    owner = msg.sender;
+  }
+
+  modifier  onlyOwner() {
+    require( msg.sender == owner ,"Only Owner can Send Message");
+    _;
+  }
+
+  mapping(string => LibDetail) public  libdetails;
+
+
+
+  function AddBookDetails(string memory _bookname , string memory _author , uint256 _price , uint256 _qut) public {
+  
+  LibDetail memory addBook = LibDetail({
+   bookname : _bookname,
+   author : _author,
+   price : _price,
+   Qut : _qut,
+   totalBought : 0,
+   totalbook : 0
+  });
+    libdetails[_bookname] = addBook;
+  }
+
+  function getAvvailableBook(string memory _bookname) public view onlyOwner returns(string memory,string memory,uint256,uint256,uint256,uint256) {
+    LibDetail memory selectedBook = libdetails[_bookname];
+    return (selectedBook.bookname,selectedBook.author,selectedBook.price,selectedBook.Qut,selectedBook.totalBought,selectedBook.totalbook=selectedBook.totalBought+selectedBook.Qut);
+  }
+
+
+  function AvailbleBook(string memory _bookname) public view returns(uint256) {
+    LibDetail memory avabook = libdetails[_bookname];
+    return (avabook.Qut);
+  }
+
+
+  function BuyQut(string memory _bookname , uint256 _quantityToBuy) public  {
+   libdetails[_bookname].Qut -= _quantityToBuy;
+   libdetails[_bookname].totalBought += _quantityToBuy;
+  }
+
+  function getTotalBook(string memory _bookname) public view returns(uint256){
+    LibDetail memory totalbook = libdetails[_bookname];
+    return (totalbook.totalBought + totalbook.Qut);
+  }
+    
+} 
+  

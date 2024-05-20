@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.25;
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "./Mint.sol";
+
+contract Marketplase is ERC1155 {
+    Mint public mint;
+
+    struct Listing {
+        address token;
+        uint256 price;
+        uint256 tokenAmount;
+        address sellerAdd;
+        bool isListed;
+    }
+
+    struct Buyer {
+        uint256 tokeid;
+        uint256 tokenAmount;
+        address buyerAdd;
+    }
+
+    mapping(uint256 => Listing) public listings;
+    mapping(uint256 => Buyer) public buyers;
+    mapping(address => uint256) public boughtBalance;
+
+    constructor(address _mintaddress)
+        ERC1155("https://mytoken.example/api/token/{id}.json")
+    {
+        mint = Mint(_mintaddress);
+    }
+
+    function listItem(
+        uint256 id,
+        uint256 price,
+        uint256 tokenamount,
+        address _token
+    ) public {
+        listings[id] = Listing(_token, price, tokenamount,msg.sender, true);
+    }
+
+   
+ function buy(uint256 id, uint256 quantity) public payable returns (bool) {
+        require(listings[id].isListed, "Item Not Listed");
+        require(
+            listings[id].tokenAmount >= quantity,
+            "Insufficient Quantity Available"
+        );
+
+        address sellerAddress = listings[id].sellerAdd;
+        uint256 salePrice = listings[id].price * quantity;
+
+        require(msg.value >= salePrice, "Insufficient funds sent");
+        payable(sellerAddress).transfer(salePrice);
+
+        mint.safeTransferFrom(sellerAddress,msg.sender,id,quantity,"");
+
+        boughtBalance[address(this)] += quantity;
+
+        buyers[id] = Buyer(id, quantity, address(this));
+        return true;
+    }
+
+    function sell(uint256 id, uint256 quantity) public payable {
+        require(listings[id].isListed, "You can Only sell Listed item");
+
+        require(
+            listings[id].tokenAmount >= quantity,
+            "Insufficient quantity listed"
+        );
+
+        address sellerAdd = listings[id].sellerAdd;
+        uint256 price = listings[id].price;
+        uint256 value = price * quantity;
+
+        mint.safeTransferFrom(sellerAdd, msg.sender, id, quantity, "");
+
+        payable(sellerAdd).transfer(value);
+
+        listings[id].tokenAmount -= quantity;
+    }
+}

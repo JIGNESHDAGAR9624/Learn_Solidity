@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+
+contract CurdLoopPrac {
+
+
+    struct Country {
+      string name;
+      string Leader;
+      uint256 Population;
+    }
+
+    Country[] public countries;
+
+    uint256 public totalCountries;
+   
+
+    constructor(){
+      totalCountries = 0;
+    }
+
+    function insertCountrieDetails(string memory CountrieName , string memory leader , uint256 population) public  {
+     
+     Country memory newCountry = Country(CountrieName , leader , population);
+     countries.push(newCountry);
+     
+     totalCountries++;
+    }
+
+   function  updateLeader(string memory countryname , string memory newleader) public returns(bool success){
+     for(uint i =0; 	i++){
+        if(keccak256(abi.encodePacked((countries[i].name))) == keccak256(abi.encodePacked((countryname)))){
+          countries[i].Leader = newleader;
+          return true;
+        }else{
+            require(keccak256(abi.encodePacked((countries[i].name))) != keccak256(abi.encodePacked((countryname)))," Country Name Not Exist");
+        }
+     }
+    
+ }
+
+
+ function removeCountries(string memory countryname) external returns(bool success)  {
+    
+    for(uint256 i =0; i< totalCountries; i++){
+      if(keccak256(abi.encodePacked((countries[i].name))) == keccak256(abi.encodePacked((countryname)))){
+      countries[i] = countries[totalCountries - 1];
+      delete countries[totalCountries -1];
+      totalCountries--;
+      countries.length-1;       
+      return true;
+        }
+
+    }
+    return  false;
+ }
+
+ function getCountry(string memory countryname) external view returns(string memory name , string memory Leader , uint256 Population ) {
+       for(uint256 i = 0; i<totalCountries; i++){
+        if(keccak256(abi.encodePacked((countries[i].name))) == keccak256(abi.encodePacked((countryname)))){
+            return( countries[i].name , countries[i].Leader ,countries[i].Population);
+        }
+       }
+        revert("country not found");
+ }
+
+
+
+
+}

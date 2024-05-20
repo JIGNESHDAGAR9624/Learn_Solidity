@@ -1,0 +1,239 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Ecommerse is Ownable {
+    using Counters for Counters.Counter;
+    Counters.Counter public _id;
+
+    Category cate;
+
+    enum BuyStatus {
+        Sold,
+        Available
+    }
+
+    enum Category {
+        Mobiles,
+        Electronics,
+        Fashion,
+        Kids,
+        Travel,
+        Grocery
+    }
+
+    enum PlatFormFeesPaid {
+        Paid,
+        Unpaid
+    }
+
+    struct ProductDetails {
+        uint256 productid;
+        string pname;
+        string sellername;
+        address selleradd;
+        Category category;
+        uint256 price;
+        uint256 AvailableQuantity;
+        string productimage;
+        bool Available;
+    }
+
+    struct seller {
+        string name;
+        address addr;
+        PlatFormFeesPaid fees;
+        bool isWhitelisted;
+    }
+
+    struct Buyer {
+        address buyeradd;
+        address selleradd;
+        string productname;
+        uint256 Quantity;
+        string productImage;
+        uint256 totalAmountPaid;
+        BuyStatus status;
+    }
+
+    mapping(uint256 => ProductDetails) public products;
+
+    mapping(address => seller) public sellers;
+
+    mapping(address => bool) public whitelist;
+    mapping(uint256 => Buyer) public buyer;
+
+    constructor() Ownable(msg.sender) {
+        _id.increment();
+    }
+
+    modifier OnlyAdmin() {
+        require(owner() == msg.sender, "Only Admine can Add Product");
+        _;
+    }
+
+    modifier OnlySeller() {
+        require(
+            whitelist[msg.sender],
+            "Only whitelisted sellers can call this function"
+        );
+        _;
+    }
+
+    function addProduct(
+        string memory _Productname,
+        string memory _sellername,
+        address _selleradd,
+        Category _cate,
+        uint256 _price,
+        uint256 _Qut,
+        string memory _productimage
+    ) public OnlySeller {
+        uint256 proid = _id.current();
+        _id.increment();
+        require(!products[proid].Available, "Product id is Not Active");
+        products[proid] = ProductDetails(
+             proid,
+            _Productname,
+            _sellername,
+            _selleradd,
+            _cate,
+            _price,
+            _Qut,
+            _productimage,
+            true
+        );
+    }
+
+    function getAllProductDetails(uint256 _proid)
+        public
+        view
+        returns (
+            uint256,
+            string memory,
+            string memory,
+            address,
+            uint256,
+            uint256,
+            string memory,
+            bool
+        )
+    {
+        require(_proid < _id.current(), "Invalid Product Id");
+        ProductDetails memory pro = products[_proid];
+        return (
+            pro.productid,
+            pro.pname,
+            pro.sellername,
+            pro.selleradd,
+            pro.price,
+            pro.AvailableQuantity,
+            pro.productimage,
+            pro.Available
+        );
+    }
+
+    function UpdateProductDetails(
+        uint256 _proidId,
+        string memory _Productname,
+        string memory _sellername,
+        address _selleradd,
+        Category _category,
+        uint256 _price,
+        uint256 _Qut,
+        string memory _proimg
+    ) public OnlySeller {
+        require(_proidId <= _id.current(), "Invalid Product Id");
+
+         
+        products[_proidId] = ProductDetails(
+            _proidId,
+            _Productname,
+            _sellername,
+            _selleradd,
+           _category,
+            _price,
+            _Qut,
+            _proimg,
+            true
+        );
+    }
+
+    function removeProductDetaisl(uint256 _productId) public OnlySeller {
+        require(_productId <= _id.current(), "");
+        delete products[_productId];
+    }
+
+    function buyProduct(uint256 proid, uint256 _quantity) external payable {
+        require(proid < _id.current(), "Invalid Product Id");
+
+        buyer[proid] = Buyer(
+            msg.sender,
+            products[proid].selleradd,
+            products[proid].pname,
+            _quantity,
+            products[proid].productimage,
+            msg.value,
+            BuyStatus.Sold
+        );
+
+        products[proid].AvailableQuantity -= _quantity;
+
+        payable(owner()).transfer(msg.value);
+        delete products[proid].productid;
+    }
+
+    function addToWhitelist(address sellerAddresses) public payable OnlyAdmin {
+        uint256 _proid = _id.current();
+        require(
+            msg.value == 1 wei,
+            "Add platfrom fees to create seller account "
+        );
+        require(msg.sender == owner(), "Only owner can call this function");
+
+        require(msg.sender == owner(), "Only Admin can  Whitelist seller");
+
+        sellers[sellerAddresses]  = seller(
+            products[_proid].sellername,
+            sellerAddresses,
+             PlatFormFeesPaid.Paid,
+             whitelist[sellerAddresses] = true
+
+        );
+       
+    }
+
+    function removeWhiteListedSeller(address sellerAddresses) public OnlyAdmin {
+        require(
+            whitelist[sellerAddresses],
+            "Only Whitelisted Seller can call this function"
+        );
+        whitelist[sellerAddresses] = false;
+    }
+
+    function removeproductQuantity(uint256 _proid, uint256 Quantity)
+        public
+        OnlySeller
+    {
+        require(_proid < _id.current(), "Invalid product Id");
+        products[_proid].AvailableQuantity -= Quantity;
+    }
+
+    function AddproductQuantity(uint256 _productid, uint256 _Quantity)
+        public
+        OnlySeller
+    {
+        require(_productid < _id.current(), "Invalid Product Id");
+        products[_productid].AvailableQuantity += _Quantity;
+    }
+
+function getCategoryByIndex(uint8 index) public pure returns (Category) {
+    require(index < uint8(Category.Grocery), "Index out of bounds");
+
+    // Dynamically convert index to Category enum value
+    return Category(index);
+}
+  
+ 
+}

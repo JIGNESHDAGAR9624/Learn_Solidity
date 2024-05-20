@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+  contract Structs {
+
+  struct Person {
+    string name;
+    uint256 age;
+    address UserWallet;
+  }
+ 
+ // array with struct  
+  Person[] public people;
+
+  function SetUserDetails(string memory _name , uint256 _age , address _userWallet) public {
+    Person memory newPerson = Person({
+    name: _name,
+    age: _age,
+    UserWallet : _userWallet
+  });
+   people.push(newPerson); 
+  }
+
+  function GetUserDetails(uint256 _index) public view returns(string memory , uint256 age , address) {
+    require(_index <  	people.length , "Length out of Area");
+    Person memory person =  people[_index];
+    return (person.name, person.age,person.UserWallet);
+  }
+  
+  function deleteUser(uint index) public {
+    delete people[index];
+  }
+  
+  function updateDetails(uint256 index, string memory _name , uint256 _age , address _userwallet) public  {
+    people[index].name = _name;
+    people[index].age = _age;
+    people[index].UserWallet = _userwallet;
+  }
+
+  }

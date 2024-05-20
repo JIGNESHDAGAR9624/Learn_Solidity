@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.25;
+import"@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import"@openzeppelin/contracts/access/Ownable.sol";
+
+contract Nftmint is ERC721{
+
+
+    constructor()ERC721("MyNft","NFT"){
+
+    }
+
+    mapping (address => bool) public _minters;
+
+    function nftmint(address _to, uint256 _tokenid) public {
+        require(_minters[msg.sender],"Caller is Not A Minter");
+      _mint(_to, _tokenid);
+    }
+
+
+    function addMinter(address _minter) public {
+        _minters[_minter] = true;
+    }
+
+    function removeMinter(address _minter) public {
+         _minters[_minter] = false;
+    }
+
+
+    function isMinter(address _minteradd) public view  returns(bool){
+        return  _minters[_minteradd];
+
+    }
+
+
+}

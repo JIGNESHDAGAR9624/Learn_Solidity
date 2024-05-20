@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity >=0.8.2 <0.9.0;
+
+
+contract EmployeeRegistry {
+
+    enum EmploymentStatus{ ACTIVE, INACTIVE, ON_LEAVE }
+
+    struct Employee {
+        string name;
+        uint256 employeeID;
+        EmploymentStatus status;
+    }
+
+    
+    mapping(uint256 => Employee) public employees;
+
+   
+    function addEmployee(string memory name, uint256 employeeID, EmploymentStatus status) public {
+        Employee memory newEmployee = Employee(name, employeeID, status);
+        employees[employeeID] = newEmployee;
+    }
+
+
+    	function getEmploye(uint256 employeeID) public view returns (string memory,uint256,EmploymentStatus) {
+        Employee memory employee = employees[employeeID];
+        return (employee.name, employee.employeeID, employee.status);
+    }
+
+    function getEmployee(uint256 employeeID) public view returns (Employee memory) {
+        return employees[employeeID];
+    }
+}

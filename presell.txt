@@ -1,0 +1,93 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Mint.sol";
+
+
+contract Presell is Ownable {
+    
+    Mint public tokenaddress;
+    uint256 public price;
+    address payable  public seller;
+    uint256 public tokenSold;
+    uint256 public startTime;
+    uint256 public endTime;
+    uint256 public minContribution;
+    uint256 public maxContribution;
+    bool public isICOActive;
+
+
+    event TokenPurchase(address indexed investor, uint256 price, uint256 tokens , uint256 InvestedWei);
+
+    struct Contributor {
+      address userAddress;
+      uint256  AmountInvested;
+      uint256  tokenPurchased;
+    }
+
+    mapping(address => Contributor) public contributor;  
+
+    constructor(
+      Mint _tokenaddress,
+      uint256 _price,
+      uint256 _startTime,
+      uint256 _endTime,
+      uint256 _minContribution,
+      uint256 _maxContribution) Ownable(msg.sender){
+      
+      require(address(_tokenaddress) != address(0), "Token address cannot be zero");
+      require(_price > 0, "Token rate must be greater than zero");
+      require(_minContribution > 0, "Minimum contribution must be greater than zero");
+
+      tokenaddress = _tokenaddress;
+      price = _price;
+      startTime = _startTime;
+      endTime = _endTime;
+      minContribution = _minContribution;
+      maxContribution = _maxContribution;
+      seller = payable(_msgSender());
+      isICOActive = true;
+    }
+    
+    modifier onlyWhileICOActive() {
+      require(isICOActive, "ICO is not active");
+      require(block.timestamp >= startTime && block.timestamp <= endTime, "ICO is not in progress");
+      _;
+    }
+
+    receive() external payable { buyToken(); }
+
+    
+    function buyToken() public payable  onlyWhileICOActive returns(bool)  {
+      require(_msgSender() != address(0) ,"Address not allowed");
+      require(msg.value >= 5 ,"Wei VALUE GRETER THEN 5");
+      uint256 _tokenQuantity = msg.value / price; 
+      require(_tokenQuantity <= tokenForSale() ,"less Quantity remaining");
+     
+
+      uint256 investedWei = msg.value;
+
+     if(isICOActive) {
+        seller.transfer(msg.value);
+        tokenaddress.transferFrom(seller, msg.sender, _tokenQuantity);
+        tokenSold += _tokenQuantity;
+    
+      
+      contributor[msg.sender].userAddress = msg.sender;
+      contributor[msg.sender].AmountInvested = msg.value;
+      contributor[msg.sender].tokenPurchased = _tokenQuantity;
+      emit TokenPurchase(msg.sender , price , _tokenQuantity , investedWei);
+      return true;
+    }
+    }
+   
+    
+    function closeICO() external onlyOwner {
+      require(isICOActive, "ICO is not active");
+      require(block.timestamp <= startTime && block.timestamp >= endTime,"Ico Only Closed after  StartTime and EndTime");
+      isICOActive = false;
+    }
+
+	   } 

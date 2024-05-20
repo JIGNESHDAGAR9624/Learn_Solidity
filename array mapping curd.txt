@@ -1,0 +1,129 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+// contract Prac {
+
+//     struct Country {
+//       string contryname;
+//       string leader;
+//       uint256 population;
+//     }
+
+
+//   Country[] public countrys;
+
+//    uint256 public totalcountries; 
+//    bool exits = true;
+     
+//     constructor(){
+//       totalcountries = 0;
+//     }
+
+//    function insertCountryDetails(string  memory _countryName , string  memory _leader , uint256 _population) public {
+//     Country memory newcountry = Country(_countryName , _leader , _population);
+//      countrys.push(newcountry);
+//      totalcountries++;
+//    }
+
+
+//    function updateCountrydetails(string memory _countryname , string memory external {
+
+//    for(uint256 i = 0; i < totalcountries; i++){
+//     if(keccak256(abi.encodePacked((countrys[i].contryname))) == keccak256(abi.encodePacked((_countryname)))){
+//       countrys[i].leader = _newleader;
+        
+//         }
+//      }
+
+// }
+
+//    function  removeCountrydetails(string memory _countryname) external {
+//       for(uint i = 0; i< totalcountries; i++){
+//         if(keccak256(abi.encodePacked((countrys[i].contryname ))) == keccak256(abi.encodePacked((_countryname)))){
+//             delete countrys[totalcountries - 1];
+//             totalcountries--;
+//             countrys.length-1;
+            
+//         }
+
+//       }
+//      }
+
+
+//      function getCountryDetails(string memory _countryname) external view returns(string memory contryname, string memory leader, uint256 population) {
+//        for (uint256 i = 0; i< totalcountries; i++){
+     
+//       if (keccak256(abi.encodePacked((countrys[i].contryname))) == keccak256(abi.encodePacked((_countryname)))){
+//           return (countrys[i].contryname ,countrys[i].leader,countrys[i].population);
+//         }else{
+//           require(!exits,"Country Not Exist");
+//         }
+//        }
+//      }
+
+//      function gettotalCountryLength() public view returns(uint256) {
+//        return countrys.length;
+//      }
+// }
+
+contract test2 {
+    
+    struct Info{
+      uint256 userid;
+      string username;
+      string password;
+    }
+   
+   Info[] public info;
+
+   mapping (uint256 => Info) public infomapping;
+    uint256 totaldata;
+
+    constructor(){
+      totaldata=1;
+    }
+    
+
+    function setarrayData(string memory _username , string memory _password) public {
+     Info memory arrayinfo = Info(0,_username,_password);
+     info.push(arrayinfo);
+     totaldata++;
+    }
+
+    function setmappingdata(uint256 _userId , string memory _username , string memory _password) public {
+     
+     Info memory mappingindo  = Info(_userId,_username,_password);
+     infomapping[_userId] = mappingindo;
+     totaldata++;
+    }
+
+    function getarrayData(uint256 _userid) public view returns(string memory, string memory) {
+    
+     Info memory arraygetinfo = info[_userid];
+     return (arraygetinfo.username,arraygetinfo.password);
+    }  
+   
+       function getmappingData(uint256 _userid) public view returns(string memory , string memory) {
+         Info memory mappgetinfo = infomapping[_userid];
+         return (mappgetinfo.username,mappgetinfo.password);
+       }
+
+       function updatearraydata(uint256 userid, string memory _username , string memory _password) public  {
+         info[userid].username = _username;
+         info[userid].password = _password;
+       }  
+
+     function updateMappingdata(uint256 userid , string memory _username , string memory _password) public {
+        infomapping[userid].username = _username;
+        infomapping[userid].password = _password;
+     }
+
+      function removearraydata(uint256  _userid) public {
+        delete  info[_userid] ;
+      }
+      
+      
+      function removemappdata(uint256  _userid) public {
+        delete infomapping[_userid] ;
+      }
+ }
